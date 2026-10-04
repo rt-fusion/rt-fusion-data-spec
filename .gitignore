@@ -1,0 +1,13 @@
+# Footage and local outputs: never commit video or audio
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.wav
+previews/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
