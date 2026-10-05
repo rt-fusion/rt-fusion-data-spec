@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rt-fusion/rt-fusion-data-spec/blob/main/schema/scene-metadata.schema.json",
+  "title": "RT-Fusion scene metadata",
+  "description": "Per-scene metadata delivered as metadata.json next to the world/ and pov/ folders. See SPEC.md.",
+  "type": "object",
+  "required": ["schema_version", "scene_id", "capture", "rig", "files", "privacy"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^0\\.1\\.[0-9]+$",
+      "description": "Version of this specification the file follows."
+    },
+    "scene_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$",
+      "description": "Unique identifier of the scene."
+    },
+    "scenario": {
+      "type": "string",
+      "description": "Scenario label, e.g. vru_cyclist_urban or robotics_stairs_entry."
+    },
+    "description": {
+      "type": "string"
+    },
+    "capture": {
+      "type": "object",
+      "required": ["start_utc", "start_utc_source", "country", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "start_utc": {
+          "type": "string",
+          "format": "date-time",
+          "description": "UTC time of world-timeline t = 0 (first frame of the first world chapter)."
+        },
+        "start_utc_source": {
+          "enum": ["gps", "camera_clock"],
+          "description": "gps: GPS time from the GoPro telemetry. camera_clock: file creation time, coarse only."
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$",
+          "description": "ISO 3166-1 alpha-2 country code."
+        },
+        "locality": {
+          "type": "string",
+          "description": "City or area."
+        },
+        "mode": {
+          "enum": ["foot", "bicycle", "car", "other"],
+          "description": "How the wearer moved during the capture."
+        },
+        "setting": {
+          "enum": ["urban", "suburban", "rural", "highway", "offroad", "indoor", "mixed", "other"]
+        },
+        "lighting": {
+          "enum": ["daylight", "dusk", "night", "artificial", "mixed"]
+        },
+        "weather": {
+          "type": "string"
+        },
+        "surface": {
+          "type": "string"
+        }
+      }
+    },
+    "rig": {
+      "type": "object",
+      "required": ["world", "pov"],
+      "additionalProperties": false,
+      "properties": {
+        "world": { "$ref": "#/$defs/world_sensor" },
+        "pov": { "$ref": "#/$defs/pov_sensor" }
+      }
+    },
+    "files": {
+      "type": "object",
+      "required": ["world", "pov"],
+      "additionalProperties": false,
+      "properties": {
+        "world": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/world_file" },
+          "description": "World-camera chapter files in recording order."
+        },
+        "pov": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/pov_clip" },
+          "description": "POV clips recorded during the scene."
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "required": ["anonymized", "wearer_consent"],
+      "additionalProperties": false,
+      "properties": {
+        "anonymized": {
+          "type": "boolean",
+          "description": "true if faces and license plates were blurred before delivery."
+        },
+        "wearer_consent": {
+          "type": "boolean",
+          "description": "true if the wearer gave written consent before capture."
+        }
+      }
+    },
+    "notes": {
+      "type": "string"
+    },
+    "custom": {
+      "type": "object",
+      "description": "Project-specific fields agreed with the client."
+    }
+  },
+  "$defs": {
+    "resolution": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[width, height] in pixels."
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "world_sensor": {
+      "type": "object",
+      "required": ["device", "config", "mount", "resolution", "fps"],
+      "additionalProperties": false,
+      "properties": {
+        "device": { "type": "string" },
+        "config": { "enum": ["A", "B"] },
+        "mount": { "enum": ["chest", "windshield", "dashboard", "other"] },
+        "lens": { "type": "string" },
+        "fov_deg": { "type": "number", "exclusiveMinimum": 0, "maximum": 360 },
+        "resolution": { "$ref": "#/$defs/resolution" },
+        "fps": { "type": "number", "exclusiveMinimum": 0 },
+        "color_profile": { "type": "string" },
+        "telemetry": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[A-Z0-9]{4}$" },
+          "uniqueItems": true,
+          "description": "GPMF streams present in the files, e.g. ACCL, GYRO, GPS9."
+        }
+      }
+    },
+    "pov_sensor": {
+      "type": "object",
+      "required": ["device", "config", "resolution", "fps", "eye_tracking"],
+      "additionalProperties": false,
+      "properties": {
+        "device": { "type": "string" },
+        "config": { "enum": ["C1", "C2"] },
+        "mount": { "const": "head" },
+        "resolution": { "$ref": "#/$defs/resolution" },
+        "fps": { "type": "number", "exclusiveMinimum": 0 },
+        "eye_tracking": {
+          "const": false,
+          "description": "The POV camera is head-locked. There is no eye tracking."
+        }
+      }
+    },
+    "world_file": {
+      "type": "object",
+      "required": ["path", "start_s", "duration_s"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "description": "Path relative to the scene folder." },
+        "start_s": { "type": "number", "minimum": 0, "description": "Position of the file's first frame on the world timeline." },
+        "duration_s": { "type": "number", "exclusiveMinimum": 0 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "pov_clip": {
+      "type": "object",
+      "required": ["path", "offset_s", "duration_s", "alignment"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "description": "Path relative to the scene folder." },
+        "offset_s": { "type": "number", "description": "World-timeline time of the clip's first frame." },
+        "duration_s": { "type": "number", "exclusiveMinimum": 0 },
+        "alignment": {
+          "type": "object",
+          "required": ["method"],
+          "additionalProperties": false,
+          "properties": {
+            "method": { "enum": ["audio_xcorr", "imu_event", "manual"] },
+            "ncc": { "type": "number", "minimum": -1, "maximum": 1, "description": "Peak normalized cross-correlation from align_streams.py." },
+            "peak_ratio": { "type": "number", "minimum": 0, "description": "Main peak divided by the strongest competing peak." }
+          }
+        },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}
